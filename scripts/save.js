@@ -1,85 +1,106 @@
-const fs = require("fs");
-const path = require("path");
 const axios = require("axios");
+const path = require("path");
 
 const GITHUB_TOKEN = "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";
 const OWNER = "HIMU106x";
-const REPO = "stuffs";
+const REPO = "TG-BOT";
 const BRANCH = "main";
-const ALLOWED_UID = "6800909814"; // Your Telegram user ID
 
 module.exports = {
   config: {
     name: "save",
-    aliases: ["ghsave"],
     version: "1.0",
     author: "Himu Mals",
     role: 2,
-    shortDescription: "Upload a local file to GitHub",
+    shortDescription: "Add new file to GitHub",
     category: "utility",
     guide: {
-      en: "{pn} filename.ext",
-    },
+      en: "{pn} filename.js <code | url>"
+    }
   },
 
-  annieStart: async function ({ message, msg, args = [] }) {
+  annieStart: async function ({ bot, msg }) {
     try {
-      // Secure access
-      if (msg.from.id.toString() !== ALLOWED_UID) {
-        return message.reply("❌ You are not authorized to use this command.");
-      }
-
-      // Fallback if args is undefined
       const input = msg.text?.split(" ") || [];
-      args = args.length ? args : input.slice(1);
+      const [command, fileName, ...rest] = input;
 
-      if (!args[0]) {
-        return message.reply("⚠️ Provide a filename to upload (e.g., `code.py`)");
-      }
-
-      const fileName = args[0];
-      const localPath = path.join("scripts", "cmds", fileName);
-
-      if (!fs.existsSync(localPath)) {
-        return message.reply("❌ File not found in `scripts/cmds/`.");
-      }
-
-      const content = fs.readFileSync(localPath, "utf-8");
-      const repoPath = `telegram_uploads/${fileName}`; // path in GitHub
-
-      // Check if file already exists in repo
-      let sha = null;
-      try {
-        const res = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
-          headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      if (!fileName || rest.length === 0) {
+        return bot.sendMessage(msg.chat.id, "❌ Usage:\n`gitadd filename.js <code | url>`", {
+          parse_mode: "Markdown"
         });
-        sha = res.data.sha;
-      } catch (_) {}
+      }
 
-      // Upload the file (create or update)
-      const res = await axios.put(
-        `https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`,
-        {
-          message: `Upload via Telegram bot: ${fileName}`,
-          content: Buffer.from(content).toString("base64"),
-          branch: BRANCH,
-          ...(sha && { sha })
-        },
-        {
-          headers: {
-            Authorization: `token ${GITHUB_TOKEN}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      if (!fileName.endsWith(".js")) {
+        return bot.sendMessage(msg.chat.id, "❌ File name must end with `.js`");
+      }
 
-      const htmlUrl = res.data.content.html_url;
-      const rawUrl = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${repoPath}`;
+      const codeSource = rest.join(" ");
+      const filePath = `scripts/cmds/${fileName}`;
+      let code;
 
-      return message.reply(`✅ Uploaded successfully!\n\n🔗 GitHub: ${htmlUrl}\n🧾 Raw: ${rawUrl}`);
-    } catch (err) {
-      console.error("Upload error:", err.response?.data || err.message);
-      return message.reply("❌ Failed to upload to GitHub.");
+      if (codeSource.startsWith("http://") || codeSource.startsWith("https://")) {
+        const response = await axios.get(codeSource);
+        code = response.data;
+      } else {
+        code = codeSource;
+      }
+
+      // Step 1: Get latest commit SHA
+      const refRes = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/git/ref/heads/${BRANCH}`, {
+        headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      });
+      const latestCommitSha = refRes.data.object.sha;
+
+      // Step 2: Get base tree
+      const commitRes = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits/${latestCommitSha}`, {
+        headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      });
+      const baseTreeSha = commitRes.data.tree.sha;
+
+      // Step 3: Create blob
+      const blobRes = await axios.post(`https://api.github.com/repos/${OWNER}/${REPO}/git/blobs`, {
+        content: code,
+        encoding: "utf-8"
+      }, {
+        headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      });
+
+      // Step 4: Create tree
+      const treeRes = await axios.post(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees`, {
+        base_tree: baseTreeSha,
+        tree: [{
+          path: filePath,
+          mode: "100644",
+          type: "blob",
+          sha: blobRes.data.sha
+        }]
+      }, {
+        headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      });
+
+      // Step 5: Create commit
+      const commitCreateRes = await axios.post(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits`, {
+        message: `Added ${fileName}`,
+        tree: treeRes.data.sha,
+        parents: [latestCommitSha]
+      }, {
+        headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      });
+
+      // Step 6: Update branch ref
+      await axios.patch(`https://api.github.com/repos/${OWNER}/${REPO}/git/refs/heads/${BRANCH}`, {
+        sha: commitCreateRes.data.sha
+      }, {
+        headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      });
+
+      return bot.sendMessage(msg.chat.id, `✅ \`${fileName}\` has been added to [${REPO}](https://github.com/${OWNER}/${REPO}/tree/${BRANCH}/scripts/cmds/)`, {
+        parse_mode: "Markdown"
+      });
+
+    } catch (error) {
+      console.error("GitHub Upload Error:", error.response?.data || error.message);
+      return bot.sendMessage(msg.chat.id, "❌ Failed to add file. Check logs or try again.");
     }
   }
 };
