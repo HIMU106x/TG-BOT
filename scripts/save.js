@@ -14,7 +14,7 @@ module.exports = {
     aliases: ["ghsave"],
     version: "1.0",
     author: "Himu Mals",
-    role: 2,
+    role: 0,
     shortDescription: "Upload local file to GitHub",
     category: "utility",
     guide: {
