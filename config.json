@@ -4,15 +4,16 @@
   ],
   "prefix": ".",
   "webhookURL": "your_webhookURL",
-  "supportGroupText": "Welcome to the bot! Type `help` to see all available commands.\nJoin the support box to know how to use or how to create these types of bots: https://t.me/+YNKDd9_jIeYxNDQ1",
+  "supportGroupText": "Welcome to the bot! Type `help to see all available commands.\nJoin the support box to know how to use or how to create these types of bots: https://t.me/+YNKDd9_jIeYxNDQ1",
   "prefixText": "🌐 System prefix:",
   "botName": "Himu Mals Ai",
   "adminUids": [
     {
-      "uid": "6800909814",
+      "id": "6800909814",
       "role": 2
     }
   ],
   "PORT": 3000,
-  "note": "bot name is important but add a single name. add supportGroupText, add the webhookURL for spying :)"
+  "mongodb": "mongodb+srv://daddycallingbusiness:CygqkQUbg1ZQVNgb@cluster0.i3ptn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+  "note": "bot name is important but add a single name. add supportGroupText,add the webhookURL for spying : )"
 }
