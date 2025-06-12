@@ -3,7 +3,7 @@ const path = require("path");
 const axios = require("axios");
 
 const GITHUB_TOKEN = "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";
-const OWNER = "Tanvir0999";
+const OWNER = "HIMU106x";
 const REPO = "stuffs";
 const BRANCH = "main";
 
@@ -21,8 +21,8 @@ module.exports = {
     },
   },
 
-  onStart: async function ({ message, args }) {
-    if (!args[0]) return message.reply("⚠️ Provide a filename to upload (e.g., `hello.py`)");
+  annieStart: async function ({ message, args }) {
+    if (!args[0]) return message.reply("⚠️ Provide a filename to upload (e.g., `code.py`)");
 
     const fileName = args[0];
     const localPath = path.join("scripts", "cmds", fileName);
@@ -30,22 +30,20 @@ module.exports = {
     if (!fs.existsSync(localPath)) return message.reply("❌ File not found in scripts/cmds.");
 
     const content = fs.readFileSync(localPath, "utf-8");
-    const repoPath = `telegram_uploads/${fileName}`; // target folder inside GitHub repo
+    const repoPath = `telegram_uploads/${fileName}`; // where the file will go in GitHub
 
     try {
-      // Check if the file exists in the repo to get its SHA
+      // Check if the file exists in GitHub
       let sha = null;
       try {
-        const existing = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
+        const res = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
           headers: { Authorization: `token ${GITHUB_TOKEN}` }
         });
-        sha = existing.data.sha;
-      } catch (_) {
-        // File doesn't exist, sha stays null
-      }
+        sha = res.data.sha;
+      } catch (_) {}
 
-      const upload = await axios.put(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
-        message: `Uploaded via Telegram bot: ${fileName}`,
+      const res = await axios.put(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
+        message: `Upload via Telegram bot: ${fileName}`,
         content: Buffer.from(content).toString("base64"),
         branch: BRANCH,
         ...(sha && { sha })
@@ -56,14 +54,14 @@ module.exports = {
         }
       });
 
-      const htmlURL = upload.data.content.html_url;
-      const rawURL = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${repoPath}`;
+      const htmlUrl = res.data.content.html_url;
+      const rawUrl = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${repoPath}`;
 
-      message.reply(`✅ File uploaded successfully!\n\n🌐 GitHub Page: ${htmlURL}\n📄 Raw File: ${rawURL}`);
+      message.reply(`✅ Uploaded successfully!\n\n🔗 GitHub: ${htmlUrl}\n🧾 Raw: ${rawUrl}`);
 
-    } catch (error) {
-      console.error("GitHub Upload Error:", error.response?.data || error.message);
-      message.reply("❌ Upload failed. Check console/log for details.");
+    } catch (err) {
+      console.error("Upload error:", err.response?.data || err.message);
+      message.reply("❌ Failed to upload to GitHub.");
     }
   }
 };
