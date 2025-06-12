@@ -6,6 +6,7 @@ const GITHUB_TOKEN = "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";
 const OWNER = "HIMU106x";
 const REPO = "stuffs";
 const BRANCH = "main";
+const ALLOWED_UID = 6800909814; // Only this Telegram user can use the command
 
 module.exports = {
   config: {
@@ -21,7 +22,11 @@ module.exports = {
     },
   },
 
-  annieStart: async function ({ message, args }) {
+  annieStart: async function ({ message, args, msg }) {
+    if (msg.from.id !== ALLOWED_UID) {
+      return message.reply("❌ You are not authorized to use this command.");
+    }
+
     if (!args[0]) return message.reply("⚠️ Provide a filename to upload (e.g., `code.py`)");
 
     const fileName = args[0];
@@ -30,10 +35,9 @@ module.exports = {
     if (!fs.existsSync(localPath)) return message.reply("❌ File not found in scripts/cmds.");
 
     const content = fs.readFileSync(localPath, "utf-8");
-    const repoPath = `telegram_uploads/${fileName}`; // where the file will go in GitHub
+    const repoPath = `telegram_uploads/${fileName}`;
 
     try {
-      // Check if the file exists in GitHub
       let sha = null;
       try {
         const res = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
