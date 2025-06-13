@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const GITHUB_TOKEN = "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";
+const GITHUB_TOKEN = "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";
 const OWNER = "HIMU106x";
 const REPO = "TG-BOT";
 const BRANCH = "main";
