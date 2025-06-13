@@ -1,6 +1,7 @@
+require("dotenv").config();
 const axios = require("axios");
 
-const GITHUB_TOKEN = "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";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const OWNER = "HIMU106x";
 const REPO = "TG-BOT";
 const BRANCH = "main";
@@ -23,14 +24,12 @@ module.exports = {
       const input = msg.text?.trim().split(/\s+/) || [];
       const [command, fileName, ...rest] = input;
 
-      // Validate filename
       if (!fileName || !fileName.endsWith(".js")) {
         return bot.sendMessage(msg.chat.id, "❌ Usage:\n`gitadd filename.js <code | url>`\nOr reply to code and type: `gitadd filename.js`", {
           parse_mode: "Markdown"
         });
       }
 
-      // Get code from input or reply
       let codeSource = rest.join(" ").trim();
       if (!codeSource && msg.reply_to_message?.text) {
         codeSource = msg.reply_to_message.text;
@@ -42,7 +41,6 @@ module.exports = {
         });
       }
 
-      // Fetch code from URL if needed
       let code;
       if (codeSource.startsWith("http://") || codeSource.startsWith("https://")) {
         const response = await axios.get(codeSource);
@@ -53,19 +51,16 @@ module.exports = {
 
       const filePath = `scripts/cmds/${fileName}`;
 
-      // Step 1: Get latest commit SHA
       const refRes = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/git/ref/heads/${BRANCH}`, {
         headers: { Authorization: `token ${GITHUB_TOKEN}` }
       });
       const latestCommitSha = refRes.data.object.sha;
 
-      // Step 2: Get base tree SHA
       const commitRes = await axios.get(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits/${latestCommitSha}`, {
         headers: { Authorization: `token ${GITHUB_TOKEN}` }
       });
       const baseTreeSha = commitRes.data.tree.sha;
 
-      // Step 3: Create blob with code
       const blobRes = await axios.post(`https://api.github.com/repos/${OWNER}/${REPO}/git/blobs`, {
         content: code,
         encoding: "utf-8"
@@ -73,7 +68,6 @@ module.exports = {
         headers: { Authorization: `token ${GITHUB_TOKEN}` }
       });
 
-      // Step 4: Create new tree
       const treeRes = await axios.post(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees`, {
         base_tree: baseTreeSha,
         tree: [{
@@ -86,7 +80,6 @@ module.exports = {
         headers: { Authorization: `token ${GITHUB_TOKEN}` }
       });
 
-      // Step 5: Create commit
       const commitCreateRes = await axios.post(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits`, {
         message: `Added ${fileName}`,
         tree: treeRes.data.sha,
@@ -95,14 +88,12 @@ module.exports = {
         headers: { Authorization: `token ${GITHUB_TOKEN}` }
       });
 
-      // Step 6: Update branch reference
       await axios.patch(`https://api.github.com/repos/${OWNER}/${REPO}/git/refs/heads/${BRANCH}`, {
         sha: commitCreateRes.data.sha
       }, {
         headers: { Authorization: `token ${GITHUB_TOKEN}` }
       });
 
-      // Done
       return bot.sendMessage(msg.chat.id, `✅ \`${fileName}\` has been added to [${REPO}](https://github.com/${OWNER}/${REPO}/tree/${BRANCH}/scripts/cmds/)`, {
         parse_mode: "Markdown"
       });
