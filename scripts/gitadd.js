@@ -10,7 +10,7 @@ module.exports = {
     name: "gitadd",
     version: "1.0",
     author: "Himu Mals",
-    role: 2,
+    role: 0,
     shortDescription: "Add new file to GitHub",
     category: "utility",
     guide: {
