@@ -7,11 +7,8 @@
   "supportGroupText": "Welcome to the bot! Type `help to see all available commands.\nJoin the support box to know how to use or how to create these types of bots: https://t.me/+YNKDd9_jIeYxNDQ1",
   "prefixText": "🌐 System prefix:",
   "botName": "Himu Mals Ai",
-  "adminUids": [
-    {
-      "id": "6800909814",
-      "role": 2
-    }
+  "adminBot": [
+    "6800909814"
   ],
   "PORT": 3000,
   "mongodb": "mongodb+srv://daddycallingbusiness:CygqkQUbg1ZQVNgb@cluster0.i3ptn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
